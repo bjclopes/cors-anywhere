@@ -1,0 +1,22 @@
+name: Render Keep-Alive
+
+on:
+  # The schedule triggers the workflow automatically
+  schedule:
+    # Runs every 10 minutes.
+    # We use 10 (instead of 14) to be safe against GitHub delays.
+    - cron: '*/10 * * * *'
+  
+  # This allows you to run the action manually from the "Actions" tab for testing
+  workflow_dispatch:
+
+jobs:
+  ping-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render App
+        # curl options:
+        # -I : Fetch headers only (lighter/faster than loading the full page body)
+        # --max-time 120 : Wait up to 120 seconds for the server to wake up
+        run: |
+          curl -I --max-time 120 https://spothelyrics-cors-proxy.onrender.com/

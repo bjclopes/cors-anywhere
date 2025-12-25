@@ -1,22 +1,35 @@
 name: Render Keep-Alive
 
 on:
-  # The schedule triggers the workflow automatically
   schedule:
-    # Runs every 10 minutes.
-    # We use 10 (instead of 14) to be safe against GitHub delays.
+    # Runs every 5 minutes to stay well within Render's 15-minute window
     - cron: '*/10 * * * *'
   
-  # This allows you to run the action manually from the "Actions" tab for testing
   workflow_dispatch:
 
 jobs:
   ping-site:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Render App
-        # curl options:
-        # -I : Fetch headers only (lighter/faster than loading the full page body)
-        # --max-time 120 : Wait up to 120 seconds for the server to wake up
+      - name: Ping Render App with Retries
         run: |
-          curl -I --max-time 120 https://spothelyrics-cors-proxy.onrender.com/
+          URL="https://spothelyrics-cors-proxy.onrender.com/"
+          for i in {1..3}; do
+            echo "Attempt $i: Pinging $URL"
+            # -s: silent
+            # -o /dev/null: don't print the page body
+            # -w: output only the HTTP status code
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 45 "$URL")
+            
+            # Checks if status is 200 (OK), 403 (Forbidden), or other valid responses
+            if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 500 ]; then
+              echo "Success! Received status $STATUS. Server is awake."
+              exit 0
+            fi
+            
+            echo "Status $STATUS received (or timeout). Waiting 20 seconds before retry..."
+            sleep 20
+          done
+          
+          echo "Failed to wake up after 3 attempts."
+          exit 1
